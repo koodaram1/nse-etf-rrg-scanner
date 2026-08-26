@@ -17,7 +17,15 @@ def inject_css():
             padding-right: 0.85rem;
             padding-bottom: 2rem;
         }
-        h1 { font-size: 1.55rem !important; margin-bottom: 0.15rem !important; }
+        h1 {
+            font-size: 1.45rem !important;
+            line-height: 1.35 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0.20rem !important;
+            padding-top: 0.30rem !important;
+            padding-bottom: 0.18rem !important;
+            overflow: visible !important;
+        }
         h2 { font-size: 1.15rem !important; margin-top: 1.15rem !important; }
         .mobile-date {
             color: #64748b;

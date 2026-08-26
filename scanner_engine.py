@@ -1,9 +1,11 @@
 """
 NSE ETF RRG Scanner Engine
-Mobile build V1
+Mobile build V1.1 — intraday scope fix
 
 Derived from the approved V4.8.3 desktop scanner.
-Trading/scoring/qualification logic is intentionally unchanged.
+Trading/scoring/qualification logic is unchanged.
+Fix: notebook variables wrapped inside run_scanner() are function-local, so
+legacy existence checks now use locals() instead of globals().
 """
 
 import os
@@ -2297,7 +2299,7 @@ def run_scanner(root_dir=None):
             0.0
         )
 
-        if 'qualified_sectors' in globals() and not qualified_sectors.empty:
+        if 'qualified_sectors' in locals() and not qualified_sectors.empty:
             rrg_meta_cols = [
                 c for c in [
                     "Theme", "SectorRRG", "RRGStrengthScore",
@@ -2830,7 +2832,7 @@ def run_scanner(root_dir=None):
 
     if not negative_seed.empty:
         _base_existing = set(prices.columns.astype(str))
-        _intraday_existing = set(extra_prices.columns.astype(str)) if 'extra_prices' in globals() else set()
+        _intraday_existing = set(extra_prices.columns.astype(str)) if 'extra_prices' in locals() else set()
 
         neg_extra_tickers = [
             t for t in negative_seed["YFTicker"].dropna().astype(str).tolist()
@@ -2916,25 +2918,25 @@ def run_scanner(root_dir=None):
         p = _neg_hist(
             tk,
             prices,
-            extra_prices if 'extra_prices' in globals() else pd.DataFrame(),
+            extra_prices if 'extra_prices' in locals() else pd.DataFrame(),
             neg_extra_prices
         )
         v = _neg_hist(
             tk,
             volumes,
-            extra_volumes if 'extra_volumes' in globals() else pd.DataFrame(),
+            extra_volumes if 'extra_volumes' in locals() else pd.DataFrame(),
             neg_extra_volumes
         )
         h = _neg_hist(
             tk,
             highs,
-            extra_highs if 'extra_highs' in globals() else pd.DataFrame(),
+            extra_highs if 'extra_highs' in locals() else pd.DataFrame(),
             neg_extra_highs
         )
         l = _neg_hist(
             tk,
             lows,
-            extra_lows if 'extra_lows' in globals() else pd.DataFrame(),
+            extra_lows if 'extra_lows' in locals() else pd.DataFrame(),
             neg_extra_lows
         )
 
