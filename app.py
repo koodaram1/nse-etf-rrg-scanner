@@ -20,7 +20,7 @@ inject_css()
 
 scan = st.session_state.get("scan")
 run_date = scan.get("run_date") if scan else None
-
+st.markdown("<div style='height:30px'></div>", unsafe_allow_html=True)
 st.subheader("NSE ETF RRG — DASHBOARD")
 
 if st.button("RUN SCANNER", type="primary"):
