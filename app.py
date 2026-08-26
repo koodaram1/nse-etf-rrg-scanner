@@ -21,14 +21,7 @@ inject_css()
 scan = st.session_state.get("scan")
 run_date = scan.get("run_date") if scan else None
 
-st.markdown(
-    '<div style="font-size:1.45rem;font-weight:800;line-height:1.35;'
-    'padding:0.35rem 0 0.20rem 0;margin:0;overflow:visible;'
-    'color:#F8FAFC !important;display:block !important;">'
-    'NSE ETF RRG — DASHBOARD</div>',
-    unsafe_allow_html=True,
-)
-st.markdown(f'<div class="mobile-date">{fmt_date(run_date)}</div>', unsafe_allow_html=True)
+st.subheader("NSE ETF RRG — DASHBOARD")
 
 if st.button("RUN SCANNER", type="primary"):
     with st.spinner("Running NSE ETF scanner..."):
