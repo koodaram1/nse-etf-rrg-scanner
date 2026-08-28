@@ -25,6 +25,8 @@ if not scan:
     st.info("Run the scanner from the Dashboard first.")
     st.stop()
 
+st.write("SCAN KEYS:", sorted(scan.keys()))
+
 st.caption("RRG charts based on the latest completed scan. Benchmark: NIFTY 50")
 
 QUAD_COLORS = {
