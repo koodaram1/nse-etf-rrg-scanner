@@ -198,19 +198,35 @@ if not theme_rrg.empty:
     st.caption("Trail = latest 5 trading days. Tap a point for RS Ratio / RS Momentum.")
 
     # Small Top 3 summary beneath chart.
-    top3 = scan.get("top_groups", pd.DataFrame()).head(3)
+    top3 = scan.get("top_groups", pd.DataFrame()).head(3).copy()
     if isinstance(top3, pd.DataFrame) and not top3.empty:
+        _rrg_order = {"LEADING": 0, "IMPROVING": 1, "WEAKENING": 2, "LAGGING": 3, "NO DATA": 4}
+        top3["_rrg_order"] = top3["SectorRRG"].astype(str).str.upper().map(_rrg_order).fillna(9)
+        top3 = top3.sort_values(["_rrg_order", "SectorRank"], ascending=[True, True], na_position="last")
         st.markdown("**TOP 3 EQUITY GROUPS**")
+        group_rows = []
         for _, r in top3.iterrows():
             nm = str(safe(r, "Theme", "-"))
-            q = str(safe(r, "SectorRRG", "-"))
+            qv = str(safe(r, "SectorRRG", "-")).upper()
             match = theme_rrg[theme_rrg["Theme"].astype(str).eq(nm)]
             rsr = match.iloc[0]["RS_Ratio"] if not match.empty else None
             rsm = match.iloc[0]["RS_Momentum"] if not match.empty else None
-            left, mid, right = st.columns([1.4, 1, 1])
-            left.markdown(f"**{nm}**  \n{rrg_html(q)}", unsafe_allow_html=True)
-            mid.metric("RS Ratio", f"{float(rsr):.2f}" if _finite(rsr) else "-")
-            right.metric("RS Mom", f"{float(rsm):.2f}" if _finite(rsm) else "-")
+            group_rows.append({
+                "Group": nm,
+                "RS Ratio": round(float(rsr), 2) if _finite(rsr) else None,
+                "RS Mom": round(float(rsm), 2) if _finite(rsm) else None,
+                "RRG": qv,
+            })
+
+        group_summary = pd.DataFrame(group_rows)
+        if not group_summary.empty:
+            group_summary["_rrg_order"] = group_summary["RRG"].map(_rrg_order).fillna(9)
+            group_summary = (
+                group_summary
+                .sort_values(["_rrg_order", "RS Mom", "RS Ratio"], ascending=[True, False, False])
+                .drop(columns=["_rrg_order"])
+            )
+            st.dataframe(group_summary, hide_index=True, use_container_width=True)
 else:
     st.info("Theme RRG data is not available in this scan.")
 
@@ -255,6 +271,9 @@ if not etf_rrg.empty and candidate_symbols:
         summary["RS_Ratio"] = pd.to_numeric(summary["RS_Ratio"], errors="coerce").round(2)
         summary["RS_Momentum"] = pd.to_numeric(summary["RS_Momentum"], errors="coerce").round(2)
         summary = summary.rename(columns={"Symbol": "ETF", "RS_Ratio": "RS Ratio", "RS_Momentum": "RS Mom", "Quadrant": "RRG"})
+        _rrg_order = {"LEADING": 0, "IMPROVING": 1, "WEAKENING": 2, "LAGGING": 3, "NO DATA": 4}
+        summary["_rrg_order"] = summary["RRG"].astype(str).str.upper().map(_rrg_order).fillna(9)
+        summary = summary.sort_values(["_rrg_order", "RS Mom", "RS Ratio"], ascending=[True, False, False]).drop(columns=["_rrg_order"])
         st.dataframe(summary, hide_index=True, use_container_width=True)
     else:
         st.info("No current Swing / Near Buy ETF has valid RRG data in this scan.")
