@@ -85,8 +85,12 @@ def _rrg_figure(latest_df, histories, key_col, title):
     fig.add_vline(x=100, line_width=1, line_dash="dot", line_color="#8B949E")
     fig.add_hline(y=100, line_width=1, line_dash="dot", line_color="#8B949E")
 
-    # Trails + current point.
-    for _, row in latest_df.iterrows():
+    # Trails + current point. Alternate label positions to reduce overlap on mobile.
+    text_positions = [
+        "top center", "bottom center", "middle left", "middle right",
+        "top left", "top right", "bottom left", "bottom right"
+    ]
+    for idx, (_, row) in enumerate(latest_df.iterrows()):
         key = str(row[key_col])
         quad = str(row.get("Quadrant", "NO DATA")).upper()
         color = QUAD_COLORS.get(quad, QUAD_COLORS["NO DATA"])
@@ -110,8 +114,8 @@ def _rrg_figure(latest_df, histories, key_col, title):
             y=[row["RS_Momentum"]],
             mode="markers+text",
             text=[key],
-            textposition="top center",
-            textfont=dict(size=11, color=color),
+            textposition=text_positions[idx % len(text_positions)],
+            textfont=dict(size=10, color=color),
             marker=dict(size=10, color=color, line=dict(width=1, color="#E5E7EB")),
             customdata=[[quad]],
             hovertemplate=(
@@ -159,18 +163,32 @@ if not theme_rrg.empty:
     else:
         equity_theme = theme_rrg.copy()
 
-    # Mobile: focus on the most relevant groups, but retain all Leading/Improving
-    # plus the highest-strength remaining themes, capped to avoid label clutter.
+    # Mobile-clean view: maximum 8 themes.
+    # Priority = today's Top 3 groups, then a small amount of rotation context
+    # from Leading / Improving / Weakening / Lagging. Display-only; no scoring changes.
     wanted = []
     top_groups = scan.get("top_groups", pd.DataFrame())
     if isinstance(top_groups, pd.DataFrame) and "Theme" in top_groups.columns:
-        wanted += top_groups["Theme"].astype(str).tolist()
-    strong = equity_theme[equity_theme["Quadrant"].astype(str).str.upper().isin(["LEADING", "IMPROVING"])]
-    wanted += strong["Theme"].astype(str).tolist()
-    wanted = list(dict.fromkeys(wanted))[:12]
+        wanted += top_groups["Theme"].dropna().astype(str).head(3).tolist()
+
+    q = equity_theme["Quadrant"].astype(str).str.upper()
+    for quadrant_name, take_n in [("LEADING", 2), ("IMPROVING", 2), ("WEAKENING", 1), ("LAGGING", 1)]:
+        part = equity_theme[q.eq(quadrant_name)].copy()
+        if "RS_Momentum" in part.columns:
+            part["_mom"] = pd.to_numeric(part["RS_Momentum"], errors="coerce")
+            part = part.sort_values("_mom", ascending=False)
+        for nm in part.get("Theme", pd.Series(dtype=str)).dropna().astype(str).tolist():
+            if nm not in wanted:
+                wanted.append(nm)
+            if len([x for x in wanted if x in part.get("Theme", pd.Series(dtype=str)).astype(str).tolist()]) >= take_n:
+                break
+        if len(wanted) >= 8:
+            break
+
+    wanted = list(dict.fromkeys(wanted))[:8]
     theme_show = equity_theme[equity_theme["Theme"].astype(str).isin(wanted)].copy()
     if theme_show.empty:
-        theme_show = equity_theme.head(12).copy()
+        theme_show = equity_theme.head(8).copy()
 
     st.plotly_chart(
         _rrg_figure(theme_show, theme_hist, "Theme", "Equity themes vs NIFTY 50"),
@@ -209,7 +227,7 @@ candidate_symbols = []
 for key in ["swing_buys", "near_buys"]:
     df = scan.get(key, pd.DataFrame())
     if isinstance(df, pd.DataFrame) and "Symbol" in df.columns:
-        candidate_symbols += df["Symbol"].dropna().astype(str).head(5).tolist()
+        candidate_symbols += df["Symbol"].dropna().astype(str).head(3).tolist()
 
 # Add best ETF from each of today's Top 3 groups.
 best_by_theme = scan.get("best_by_theme", pd.DataFrame())
@@ -220,7 +238,7 @@ if isinstance(best_by_theme, pd.DataFrame) and not best_by_theme.empty and "Them
         if not m.empty and "Symbol" in m.columns:
             candidate_symbols.append(str(m.iloc[0]["Symbol"]))
 
-candidate_symbols = list(dict.fromkeys(candidate_symbols))[:10]
+candidate_symbols = list(dict.fromkeys(candidate_symbols))[:7]
 
 if not etf_rrg.empty and candidate_symbols:
     etf_show = etf_rrg[etf_rrg["Symbol"].astype(str).isin(candidate_symbols)].copy()
@@ -230,7 +248,7 @@ if not etf_rrg.empty and candidate_symbols:
             use_container_width=True,
             config={"displaylogo": False, "responsive": True},
         )
-        st.caption("Candidates = Swing Buy + Near Buy + best ETF from leading groups. Trail = latest 5 trading days.")
+        st.caption("Mobile view: up to 7 important ETFs from Swing Buy + Near Buy + Top Groups. Trail = latest 5 trading days.")
 
         # Compact current-position table.
         summary = etf_show[["Symbol", "RS_Ratio", "RS_Momentum", "Quadrant"]].copy()
