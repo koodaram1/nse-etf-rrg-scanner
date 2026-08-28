@@ -6568,6 +6568,18 @@ def run_scanner(root_dir=None):
         "intraday_groups": top5_intraday_groups.copy(),
         "intraday_buys": intraday_buys.copy(),
         "intraday_near": intraday_watchlist.copy(),
+        # Mobile Charts page — presentation payload only.
+        # Reuses RRG data already calculated above; no new market-data download
+        # and no trading/scoring/qualification logic is changed.
+        "theme_rrg": theme_rrg.copy(),
+        "etf_rrg": rrg_etf.copy(),
+        "best_by_theme": best_by_theme.copy(),
+        "theme_rrg_history": {
+            k: v.tail(RRG_TRAIL_DAYS).copy() for k, v in theme_rrg_history.items()
+        },
+        "etf_rrg_history": {
+            k: v.tail(RRG_TRAIL_DAYS).copy() for k, v in rrg_history.items()
+        },
         "excel_file": str(excel_file),
     }
 
